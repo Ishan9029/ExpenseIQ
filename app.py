@@ -233,8 +233,6 @@ hr { border-color: #1e2130 !important; }
 
 
 # ─── Constants ──────────────────────────────────────────────
-SAVE_FILE = "my_expenses.csv"
-CONTEXT_FILE = "expense_context.json"
 COLS = ["Date", "Description", "Category", "Payment_Mode", "Amount"]
 DAYS_REQUIRED = 10
 
@@ -315,69 +313,36 @@ def ensure_expense_schema(df_in: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_saved_context() -> dict:
-    default_context = {
-        "inferred_monthly_income": None,
-        "current_balance": None,
-        "budgets": {},
+    # Data is stored per-user in st.session_state only — no shared files.
+    return {
+        "inferred_monthly_income": st.session_state.get("inferred_monthly_income"),
+        "current_balance": st.session_state.get("current_balance"),
+        "budgets": st.session_state.get("budgets", {}),
     }
-    if not os.path.exists(CONTEXT_FILE):
-        return default_context
-
-    try:
-        with open(CONTEXT_FILE, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-        return {
-            "inferred_monthly_income": raw.get("inferred_monthly_income"),
-            "current_balance": raw.get("current_balance"),
-            "budgets": raw.get("budgets", {}),
-        }
-    except Exception:
-        return default_context
 
 
 def save_context() -> None:
-    payload = {
-        "inferred_monthly_income": (
-            float(st.session_state.inferred_monthly_income)
-            if st.session_state.inferred_monthly_income is not None
-            else None
-        ),
-        "current_balance": (
-            float(st.session_state.current_balance)
-            if st.session_state.current_balance is not None
-            else None
-        ),
-        "budgets": st.session_state.get("budgets", {}),
-    }
-    with open(CONTEXT_FILE, "w", encoding="utf-8") as f:
-        json.dump(payload, f)
+    # All context is already in st.session_state; nothing to write to disk.
+    pass
 
 
+# ── Per-user session initialisation (no shared files) ────────
 if "expenses" not in st.session_state:
-    if os.path.exists(SAVE_FILE):
-        try:
-            st.session_state.expenses = ensure_expense_schema(pd.read_csv(SAVE_FILE))
-        except Exception:
-            st.session_state.expenses = pd.DataFrame(columns=COLS)
-    else:
-        st.session_state.expenses = pd.DataFrame(columns=COLS)
-
-saved_context = load_saved_context()
+    st.session_state.expenses = pd.DataFrame(columns=COLS)
 
 if "inferred_monthly_income" not in st.session_state:
-    st.session_state.inferred_monthly_income = saved_context.get("inferred_monthly_income")
+    st.session_state.inferred_monthly_income = None
 
 if "current_balance" not in st.session_state:
-    st.session_state.current_balance = saved_context.get("current_balance")
+    st.session_state.current_balance = None
 
 if "budgets" not in st.session_state:
-    st.session_state.budgets = saved_context.get("budgets", {})
+    st.session_state.budgets = {}
 
 
 def save_expenses() -> None:
+    # Persist only in session_state — writing to disk would share data across all users.
     st.session_state.expenses = ensure_expense_schema(st.session_state.expenses)
-    st.session_state.expenses.to_csv(SAVE_FILE, index=False)
-    save_context()
 
 
 # ─── Bank parsing helpers ───────────────────────────────────
@@ -1522,4 +1487,4 @@ with tab4:
                 xaxis=dict(gridcolor="rgba(0,0,0,0)"),
                 yaxis=dict(gridcolor="#1e2130", tickprefix="₹"),
             )
-            st.plotly_chart(fig_budget, use_container_width=True) 
+            st.plotly_chart(fig_budget, use_container_width=True)
