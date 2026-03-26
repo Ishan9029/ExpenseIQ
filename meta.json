@@ -1,0 +1,24 @@
+{
+  "features": [
+    "Category_Encoded",
+    "Payment_Encoded",
+    "Month",
+    "Day",
+    "DayOfWeek",
+    "WeekOfYear"
+  ],
+  "categories": [
+    "Entertainment",
+    "Food",
+    "Health",
+    "Rent",
+    "Shopping",
+    "Transport",
+    "Utilities"
+  ],
+  "payment_modes": [
+    "Card",
+    "Cash",
+    "Online"
+  ]
+}
